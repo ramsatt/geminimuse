@@ -6,10 +6,19 @@ import { AdMob, BannerAdOptions, BannerAdSize, BannerAdPosition, AdOptions, Rewa
 })
 export class AdmobService {
   
+  // Set to TRUE for development to avoid "No Fill" errors and policy violations
+  // Set to FALSE for production release
+  private readonly TEST_MODE = false;
+
   // Production Ad Unit IDs
   private readonly BANNER_ID = 'ca-app-pub-8970665297590705/9754370276';
   private readonly INTERSTITIAL_ID = 'ca-app-pub-8970665297590705/4301581666';
   private readonly REWARD_ID = 'ca-app-pub-8970665297590705/8320717729';
+
+  // Test Ad Unit IDs (Standard Google Test IDs)
+  private readonly TEST_BANNER_ID = 'ca-app-pub-3940256099942544/6300978111';
+  private readonly TEST_INTERSTITIAL_ID = 'ca-app-pub-3940256099942544/1033173712';
+  private readonly TEST_REWARD_ID = 'ca-app-pub-3940256099942544/5224354917';
 
   constructor() {
     this.initialize();
@@ -19,9 +28,9 @@ export class AdmobService {
     try {
        await AdMob.initialize({
          testingDevices: [],
-         initializeForTesting: false,
+         initializeForTesting: this.TEST_MODE,
        });
-       console.log('AdMob Initialized (Production Mode)');
+       console.log(`AdMob Initialized (${this.TEST_MODE ? 'Test' : 'Production'} Mode)`);
     } catch (e) {
       console.error('AdMob Init Error', e);
     }
@@ -30,11 +39,11 @@ export class AdmobService {
   async showBanner() {
     try {
       const options: BannerAdOptions = {
-        adId: this.BANNER_ID,
+        adId: this.TEST_MODE ? this.TEST_BANNER_ID : this.BANNER_ID,
         adSize: BannerAdSize.ADAPTIVE_BANNER,
         position: BannerAdPosition.BOTTOM_CENTER,
         margin: 0,
-        isTesting: false
+        isTesting: this.TEST_MODE
       };
       await AdMob.showBanner(options);
     } catch (e) {
@@ -57,8 +66,8 @@ export class AdmobService {
   async showInterstitial(): Promise<boolean> {
     try {
       const options: AdOptions = {
-        adId: this.INTERSTITIAL_ID,
-        isTesting: false
+        adId: this.TEST_MODE ? this.TEST_INTERSTITIAL_ID : this.INTERSTITIAL_ID,
+        isTesting: this.TEST_MODE
       };
       await AdMob.prepareInterstitial(options);
       await AdMob.showInterstitial();
@@ -73,8 +82,8 @@ export class AdmobService {
     return new Promise(async (resolve) => {
       try {
         const options: AdOptions = {
-          adId: this.REWARD_ID,
-          isTesting: false
+          adId: this.TEST_MODE ? this.TEST_REWARD_ID : this.REWARD_ID,
+          isTesting: this.TEST_MODE
         };
         
         await AdMob.prepareRewardVideoAd(options);

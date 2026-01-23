@@ -96,7 +96,7 @@
        </div>
 
        <!-- Scrollable Text -->
-       <div class="flex-1 overflow-y-auto mb-6 pr-2 custom-scrollbar md:my-8 text-left">
+       <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar mb-4">
           <p class="text-gray-600 text-base md:text-xl leading-relaxed font-medium mt-4 whitespace-pre-line">
              {{ currentPrompt() }}
           </p>
@@ -104,7 +104,7 @@
 
        <!-- Primary Action Button -->
        <button (click)="copyToClipboard()" 
-               class="w-full h-16 md:h-20 bg-[#FFD700] hover:bg-[#FFC107] active:scale-[0.98] rounded-2xl md:rounded-full flex items-center justify-center gap-3 transition-all duration-300 shadow-xl shadow-yellow-200/50 group shrink-0">
+               class="w-full h-16 md:h-20 bg-[#FFD700] hover:bg-[#FFC107] active:scale-[0.98] rounded-2xl md:rounded-full flex items-center justify-center gap-3 transition-all duration-300 shadow-xl shadow-yellow-200/50 group shrink-0 mb-8">
            @if (copyStatus() === 'Copied!') {
                <svg class="w-6 h-6 md:w-8 md:h-8 text-black animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                <span class="text-black font-bold text-lg md:text-xl tracking-wide">SUCCESS</span>
@@ -115,6 +115,34 @@
                <span class="text-black font-bold text-lg md:text-xl tracking-wide">COPY PROMPT</span>
            }
        </button>
+
+       <!-- Related Prompts Section -->
+       @if (relatedPrompts().length > 0) {
+         <div class="mb-4 shrink-0">
+           <h3 class="text-lg md:text-xl font-bold text-gray-900 mb-4">Similar Prompts</h3>
+           
+           <div class="flex gap-4 overflow-x-auto custom-scrollbar pb-2 -mx-2 px-2">
+             @for (related of relatedPrompts(); track related.id) {
+               <div (click)="openRelatedPrompt(related.id)" 
+                    class="flex-shrink-0 w-32 md:w-40 cursor-pointer group">
+                 <div class="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                   <img [src]="related.url" 
+                        [alt]="'Related prompt ' + related.id"
+                        class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                        loading="lazy">
+                   
+                   <!-- Overlay on hover -->
+                   <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                     <div class="absolute bottom-0 left-0 right-0 p-3">
+                       <p class="text-white text-xs line-clamp-3 font-medium">{{ related.prompt }}</p>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             }
+           </div>
+         </div>
+       }
 
     </div>
 

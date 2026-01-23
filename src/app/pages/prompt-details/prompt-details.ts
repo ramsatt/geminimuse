@@ -17,11 +17,20 @@ export class PromptDetailsPage {
   private dataService = inject(DataService);
   private admobService = inject(AdmobService);
 
-  id = this.route.snapshot.paramMap.get('id');
+  id = signal<string | null>(null);
+  
+  constructor() {
+    // Listen to route changes to update ID and scroll to top
+    this.route.paramMap.subscribe(params => {
+      this.id.set(params.get('id'));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
   
   // Find image from service based on ID
   image = computed(() => {
-    const id = parseInt(this.id || '0', 10);
+    const idStr = this.id();
+    const id = parseInt(idStr || '0', 10);
     return this.dataService.items().find(i => i.id === id);
   });
 
@@ -54,6 +63,47 @@ export class PromptDetailsPage {
       case 'ml': return img.prompt_ml || img.prompt;
       default: return img.prompt;
     }
+  });
+
+  // Related Prompts Logic
+  relatedPrompts = computed(() => {
+    const current = this.image();
+    if (!current) return [];
+    
+    const allItems = this.dataService.items();
+    const currentId = current.id;
+    
+    // Extract keywords from current prompt
+    const keywords = current.prompt
+      .toLowerCase()
+      .split(' ')
+      .filter(word => word.length > 4)
+      .slice(0, 5);
+    
+    // Find similar prompts
+    const scored = allItems
+      .filter(item => item.id !== currentId)
+      .map(item => {
+        const promptLower = item.prompt.toLowerCase();
+        const score = keywords.reduce((acc, keyword) => {
+          return acc + (promptLower.includes(keyword) ? 1 : 0);
+        }, 0);
+        return { item, score };
+      })
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6)
+      .map(({ item }) => item);
+    
+    // Fallback to random if no matches
+    if (scored.length === 0) {
+      return allItems
+        .filter(item => item.id !== currentId)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 6);
+    }
+    
+    return scored;
   });
 
   private getFreeCopies(): number {
@@ -126,6 +176,10 @@ export class PromptDetailsPage {
 
   closeRewardPrompt() {
     this.showRewardPrompt.set(false);
+  }
+
+  openRelatedPrompt(id: number) {
+    this.router.navigate(['/prompt', id]);
   }
 
   goBack() {
