@@ -60,7 +60,7 @@ export class HomeComponent implements OnInit {
   });
 
   // Infinite Scroll Logic
-  displayLimit = signal<number>(10);
+  displayLimit = signal<number>(20); // Increased from 10 to fill screen better
   
   visibleImages = computed(() => {
     return this.allFilteredImages().slice(0, this.displayLimit());
@@ -92,12 +92,12 @@ export class HomeComponent implements OnInit {
 
   onScroll(index: number) {
     const currentRows = this.gridRows().length;
-    const buffer = 3; // Load more when within 3 rows of bottom
+    const buffer = 5; // Increased buffer to load earlier (was 3)
     
     if (index + buffer >= currentRows) {
        // Check if we have more items to load
        if (this.displayLimit() < this.allFilteredImages().length) {
-         this.displayLimit.update(l => l + 8);
+         this.displayLimit.update(l => l + 16); // Load 16 items at once (was 8)
        }
     }
   }
@@ -137,13 +137,13 @@ export class HomeComponent implements OnInit {
 
   setCategory(cat: string) {
     this.activeCategory.set(cat);
-    this.displayLimit.set(10); // Reset limit on filter change
+    this.displayLimit.set(20); // Reset to initial count
   }
 
   updateSearch(e: Event) {
     const el = e.target as HTMLInputElement;
     this.searchQuery.set(el.value);
-    this.displayLimit.set(10); // Reset limit on search change
+    this.displayLimit.set(20); // Reset to initial count
   }
 
   async openImage(image: GeminiRef) {
