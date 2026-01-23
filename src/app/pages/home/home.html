@@ -77,7 +77,12 @@
       </div>
     } @else {
       <!-- Virtual Scroll Viewport -->
-      <cdk-virtual-scroll-viewport itemSize="460" class="h-full w-full custom-scrollbar pr-2" (scrolledIndexChange)="onScroll($event)">
+      <cdk-virtual-scroll-viewport 
+        [itemSize]="380" 
+        [minBufferPx]="800" 
+        [maxBufferPx]="1600"
+        class="h-full w-full custom-scrollbar pr-2" 
+        (scrolledIndexChange)="onScroll($event)">
         <!-- Spacing wrapper -->
         <div *cdkVirtualFor="let row of gridRows()" class="flex w-full mb-6 gap-6">
            @for (item of row; track item.id) {
