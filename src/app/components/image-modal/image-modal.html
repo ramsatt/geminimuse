@@ -1,0 +1,81 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" 
+     style="animation: fadeIn 0.3s ease-out forwards;">
+  
+  <!-- Backyard Blur - Light, frosty -->
+  <div class="absolute inset-0 bg-white/60 backdrop-blur-xl transition-opacity" (click)="onClose()"></div>
+
+  <!-- Modal Card -->
+  <div class="relative w-full max-w-5xl max-h-[90vh] bg-white rounded-3xl overflow-hidden shadow-2xl shadow-gray-200/50 border border-white flex flex-col md:flex-row animate-scale-in" (click)="$event.stopPropagation()">
+    
+    <!-- Image Section (Left/Top) -->
+    <div class="relative w-full md:w-[55%] bg-[#F8F9FA] flex items-center justify-center overflow-hidden group border-b md:border-b-0 md:border-r border-gray-100">
+        <!-- Subtle Pattern -->
+        <div class="absolute inset-0 opacity-[0.4] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-repeat mix-blend-overlay"></div>
+        
+        <img [src]="image?.url" class="relative z-10 w-full h-full object-contain max-h-[40vh] md:max-h-full transition-transform duration-700 ease-in-out p-4" alt="Preview">
+        
+        <!-- Fullscreen hint -->
+        <a [href]="image?.url" target="_blank" class="absolute top-4 right-4 p-2.5 bg-white/80 backdrop-blur-md rounded-full text-gray-500 hover:text-gray-900 hover:bg-white transition opacity-0 group-hover:opacity-100 border border-gray-100 shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+        </a>
+    </div>
+
+    <!-- Content Section (Right/Bottom) -->
+    <div class="relative w-full md:w-[45%] flex flex-col bg-white">
+        <!-- Header -->
+        <div class="px-8 py-6 border-b border-gray-100 flex items-center justify-between shrink-0 glass-effect">
+            <h3 class="text-xl font-bold text-gray-900 tracking-tight">
+                Prompt Details
+            </h3>
+            <button (click)="onClose()" class="p-2 -mr-2 text-gray-400 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors duration-200">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <!-- Language Tabs -->
+        <div class="px-8 pt-6 pb-2 border-b border-gray-50 flex gap-2 overflow-x-auto custom-scrollbar whitespace-nowrap bg-white">
+            @for (lang of languages; track lang.code) {
+                <button (click)="setLanguage(lang.code)"
+                        [class]="selectedLanguage() === lang.code 
+                            ? 'bg-gray-900 text-white shadow-md shadow-gray-200' 
+                            : 'bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 border border-gray-100'"
+                        class="px-4 py-2 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 outline-none focus:outline-none">
+                    {{ lang.label }}
+                </button>
+            }
+        </div>
+
+        <!-- Scrollable Prompt Area -->
+        <div class="flex-1 px-8 py-6 overflow-y-auto custom-scrollbar bg-white">
+            <div class="prose prose-gray max-w-none">
+                <p class="text-gray-700 text-[16px] leading-8 font-normal tracking-normal min-h-[120px] transition-all duration-300 selection:bg-gray-200 selection:text-black">
+                    {{ currentPrompt() }}
+                </p>
+            </div>
+            
+            <!-- Metadata tags -->
+            <div class="flex flex-wrap gap-2 mt-8 pt-6 border-t border-gray-100">
+                <span class="px-3 py-1.5 text-[11px] uppercase font-bold tracking-wider text-gray-500 border border-gray-200 rounded-lg bg-gray-50/50">Gemini 1.5 Pro</span>
+                <span class="px-3 py-1.5 text-[11px] uppercase font-bold tracking-wider text-gray-500 border border-gray-200 rounded-lg bg-gray-50/50">High Fidelity</span>
+                <span class="px-3 py-1.5 text-[11px] uppercase font-bold tracking-wider text-gray-500 border border-gray-200 rounded-lg bg-gray-50/50">8K UHD</span>
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="p-8 border-t border-gray-100 bg-white shrink-0">
+            <button (click)="copyToClipboard()" 
+                    class="group relative w-full flex items-center justify-center gap-2 px-6 py-4 bg-gray-900 hover:bg-black text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-all shadow-xl shadow-gray-200 overflow-hidden ring-1 ring-black/5">
+                
+                @if (copyStatus() === 'Copied!') {
+                    <svg class="w-4 h-4 animate-bounce text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                } @else {
+                    <svg class="w-4 h-4 text-gray-300 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                }
+                
+                <span class="tracking-wider uppercase text-xs">{{ copyStatus() }}</span>
+            </button>
+        </div>
+
+    </div>
+  </div>
+</div>

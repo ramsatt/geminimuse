@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Gemini Muse</string>
+    <string name="title_activity_main">Gemini Muse</string>
+    <string name="package_name">com.codingtamilan.geminimuse</string>
+    <string name="custom_url_scheme">com.codingtamilan.geminimuse</string>
+</resources>

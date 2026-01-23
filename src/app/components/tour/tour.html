@@ -1,0 +1,54 @@
+<div class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm animate-fade-in">
+    <!-- Card -->
+    <div class="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col p-8 md:p-10 animate-slide-up">
+        
+        <!-- Graphic Area -->
+        <div class="flex-1 flex items-center justify-center min-h-[180px] mb-6">
+            <div class="w-32 h-32 bg-white rounded-3xl flex items-center justify-center shadow-lg shadow-blue-100 animate-bounce-slow overflow-hidden p-4">
+                @if (steps[currentStep()].image === '✨') {
+                    <img src="assets/images/logo.png" alt="Gemini Muse" class="w-full h-full object-contain">
+                } @else {
+                    <div class="text-6xl">{{ steps[currentStep()].image }}</div>
+                }
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="text-center mb-10">
+            <h2 class="text-3xl font-bold text-gray-900 mb-3 tracking-tight leading-tight">
+                {{ steps[currentStep()].title }}
+            </h2>
+            <p class="text-gray-500 font-medium text-lg leading-relaxed">
+                {{ steps[currentStep()].description }}
+            </p>
+        </div>
+
+        <!-- Dots Indicator -->
+        <div class="flex justify-center gap-2 mb-8">
+            @for (step of steps; track $index) {
+                <div class="h-2 rounded-full transition-all duration-300"
+                     [class.w-8]="$index === currentStep()"
+                     [class.bg-yellow-400]="$index === currentStep()"
+                     [class.w-2]="$index !== currentStep()"
+                     [class.bg-gray-200]="$index !== currentStep()">
+                </div>
+            }
+        </div>
+
+        <!-- Actions -->
+        <div class="flex flex-col gap-3">
+            <button (click)="next()" 
+                    class="w-full h-14 bg-gray-900 text-white hover:bg-black active:scale-[0.98] rounded-2xl font-bold text-lg tracking-wide transition-all shadow-lg shadow-gray-200">
+                {{ currentStep() === steps.length - 1 ? 'Get Started' : 'Next' }}
+            </button>
+            
+            @if (currentStep() < steps.length - 1) {
+                <button (click)="skip()" 
+                        class="w-full h-12 text-gray-400 font-bold text-sm tracking-widest hover:text-gray-600 transition-colors uppercase">
+                    Skip
+                </button>
+            }
+        </div>
+
+    </div>
+</div>
