@@ -1,11 +1,11 @@
-# CI/CD Pipeline Setup Guide for Gemini Muse
+# CI/CD Pipeline Setup Guide for Gemini Muse Web App
 
 ## Overview
-This project uses GitHub Actions to automatically build and deploy the Android app to an FTP server on every code push.
+This project uses GitHub Actions to automatically build and deploy the web application to an FTP server on every code push.
 
 ## Prerequisites
 - GitHub repository with your code
-- FTP server access (host, username, password)
+- FTP server with web hosting (cPanel, DirectAdmin, etc.)
 - GitHub account with repository admin access
 
 ## Setup Instructions
@@ -19,20 +19,28 @@ Go to your GitHub repository:
 
 | Secret Name | Description | Example |
 |------------|-------------|---------|
-| `FTP_SERVER` | FTP server hostname | `ftp.example.com` |
-| `FTP_USERNAME` | FTP username | `user@example.com` |
+| `FTP_SERVER` | FTP server hostname | `ftp.yourdomain.com` or `example.com` |
+| `FTP_USERNAME` | FTP username | `user@yourdomain.com` |
 | `FTP_PASSWORD` | FTP password | `your-secure-password` |
 
 ### 2. FTP Server Directory Structure
 
-The pipeline will create/use this structure on your FTP server:
+The pipeline will deploy to this structure on your FTP server:
 ```
-/gemini-muse/
-  └── builds/
-      ├── gemini-muse-debug-20260123_120000.apk
-      ├── gemini-muse-debug-20260123_150000.apk
-      └── gemini-muse-release-20260123_120000.apk
+/public_html/
+  └── gemini-muse/
+      ├── index.html
+      ├── main-*.js
+      ├── styles-*.css
+      ├── assets/
+      │   ├── images/
+      │   └── data/
+      └── deployment-info.txt
 ```
+
+**Note:** Adjust `server-dir` in the workflow if your hosting uses a different public directory:
+- cPanel: `/public_html/`
+- Some hosts: `/htdocs/`, `/www/`, or `/html/`
 
 ### 3. Workflow Trigger
 
@@ -40,47 +48,53 @@ The workflow automatically runs when you:
 - Push code to the `main` branch
 - Create a pull request to `main`
 
-### 4. Manual Trigger (Optional)
+### 4. Access Your Deployed App
 
-To run the workflow manually:
-1. Go to **Actions** tab in GitHub
-2. Click **Build and Deploy Gemini Muse**
-3. Click **Run workflow**
-4. Select branch and click **Run workflow**
+After successful deployment, access your app at:
+```
+https://yourdomain.com/gemini-muse/
+```
+
+Or if deployed to root:
+```
+https://yourdomain.com/
+```
 
 ## What the Pipeline Does
 
 1. ✅ **Checkout code** - Pulls latest code from repository
-2. ✅ **Setup environment** - Installs Node.js 20 and Java 17
+2. ✅ **Setup Node.js** - Installs Node.js 20
 3. ✅ **Install dependencies** - Runs `npm ci`
-4. ✅ **Build web app** - Compiles Angular application
-5. ✅ **Sync Capacitor** - Prepares Android project
-6. ✅ **Build APKs** - Creates debug and release APKs
-7. ✅ **Add timestamps** - Names APKs with build date/time
-8. ✅ **Upload artifacts** - Stores APKs in GitHub (30 days)
-9. ✅ **Deploy to FTP** - Uploads APKs to your FTP server
+4. ✅ **Build web app** - Compiles Angular application to production
+5. ✅ **Create archive** - Zips build for backup
+6. ✅ **Upload artifact** - Stores build in GitHub (30 days)
+7. ✅ **Deploy to FTP** - Uploads all files to web server
+8. ✅ **Add deployment info** - Creates metadata file with build details
 
-## Build Artifacts
+## Build Output
 
 ### GitHub Artifacts (Temporary Storage)
-- Stored for 30 days
+- Stored as `gemini-muse-build-{timestamp}.zip`
+- Kept for 30 days
 - Accessible from the Actions run page
-- Download link provided in workflow summary
+- Useful for rollbacks or local testing
 
-### FTP Server (Permanent Storage)
-- APKs uploaded to `/gemini-muse/builds/`
-- Filenames include timestamp for version tracking
-- Old builds are NOT automatically deleted (manual cleanup needed)
+### FTP Server (Live Deployment)
+- All compiled files deployed to `/public_html/gemini-muse/`
+- Includes `deployment-info.txt` with build metadata
+- Previous files are overwritten (incremental deployment)
 
-## APK Naming Convention
+## Deployment Info
 
+Each deployment creates a `deployment-info.txt` file containing:
 ```
-gemini-muse-{type}-{timestamp}.apk
+Build Date: Thu Jan 23 11:53:00 UTC 2026
+Commit: abc123def456...
+Branch: main
+Build Number: 42
 ```
 
-Examples:
-- `gemini-muse-debug-20260123_143022.apk`
-- `gemini-muse-release-20260123_143022.apk`
+Access it at: `https://yourdomain.com/gemini-muse/deployment-info.txt`
 
 ## Build Status
 
@@ -88,34 +102,42 @@ Check build status:
 1. Go to **Actions** tab in your repository
 2. View recent workflow runs
 3. Click on a run to see detailed logs
-4. Download APKs from the **Artifacts** section
+4. Download build zip from the **Artifacts** section
 
 ## Troubleshooting
 
 ### Build Fails
-- Check the Actions logs for error messages
-- Verify all secrets are correctly set
-- Ensure `package.json` has all required dependencies
+- Check the Actions logs for specific error messages
+- Verify `package.json` dependencies
+- Ensure `npm run build` works locally
 
 ### FTP Upload Fails
-- Verify FTP credentials in secrets
-- Check FTP server permissions
-- Ensure `/gemini-muse/builds/` directory exists or server allows directory creation
+- Verify FTP credentials in GitHub secrets
+- Check FTP server permissions (775 or 755 for directories)
+- Ensure `/public_html/gemini-muse/` directory exists or server allows creation
+- Try using IP address instead of hostname for `FTP_SERVER`
 
-### APK Build Fails
-- Check Java version (should be 17)
-- Verify Android SDK licenses
-- Review Gradle build logs in Actions output
+### Website Shows Errors
+- Check browser console for errors
+- Verify base href in `index.html` matches deployment path
+- Ensure all assets are uploaded (check FTP logs in Actions)
+
+### AdMob Not Working
+- AdMob requires HTTPS for web apps
+- Ensure your domain has SSL certificate
+- Check browser console for Content Security Policy errors
 
 ## Customization
 
-### Change FTP Directory
+### Change Deployment Directory
 Edit `.github/workflows/build-deploy.yml`:
 ```yaml
-server-dir: /your-custom-path/builds/
+server-dir: /public_html/  # Deploy to root
+# or
+server-dir: /public_html/my-app/  # Custom subdirectory
 ```
 
-### Build Only on Tags
+### Deploy Only on Release Tags
 Change trigger to:
 ```yaml
 on:
@@ -124,31 +146,36 @@ on:
       - 'v*'
 ```
 
-### Add Slack Notifications
-Add this step at the end:
-```yaml
-- name: Slack Notification
-  uses: 8398a7/action-slack@v3
-  with:
-    status: ${{ job.status }}
-    webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-```
+### Add Custom Domain
+After deployment, configure your domain:
+1. Point domain to server IP
+2. Update `.env` files if needed
+3. Configure SSL certificate
+
+## Performance Optimization
+
+The build is production-optimized with:
+- ✅ Minified JavaScript and CSS
+- ✅ Tree-shaking (removes unused code)
+- ✅ Lazy loading for routes
+- ✅ Asset optimization
 
 ## Security Best Practices
 
 1. ✅ Never commit secrets to code
-2. ✅ Use GitHub Secrets for sensitive data
-3. ✅ Rotate FTP passwords regularly
-4. ✅ Use FTPS (FTP over SSL) if available
-5. ✅ Limit FTP user permissions to specific directory
+2. ✅ Use GitHub Secrets for FTP credentials
+3. ✅ Enable HTTPS on your domain
+4. ✅ Use strong FTP passwords
+5. ✅ Limit FTP user permissions to web directory only
+6. ✅ Consider SFTP instead of FTP if available
 
-## Release Management
+## Rollback Procedure
 
-For production releases:
-1. Create a git tag: `git tag v1.0.0`
-2. Push tag: `git push origin v1.0.0`
-3. Build will trigger automatically
-4. Sign APK manually or use automated signing (requires keystore setup)
+To rollback to a previous version:
+1. Go to Actions → Find successful previous build
+2. Download the artifact zip
+3. Extract and manually upload to FTP
+4. Or: Revert commit and push to trigger new deployment
 
 ## Cost
 
@@ -156,8 +183,24 @@ GitHub Actions is FREE for public repositories with these limits:
 - 2,000 minutes/month for private repos (free tier)
 - Unlimited for public repos
 
-Typical build time: ~5-10 minutes
+Typical build time: ~2-3 minutes
+
+## Advanced: Custom Build Script
+
+Add to `package.json`:
+```json
+"scripts": {
+  "build:prod": "ng build --configuration production --base-href /gemini-muse/"
+}
+```
+
+Update workflow:
+```yaml
+- name: Build Angular web app
+  run: npm run build:prod
+```
 
 ---
 
-**Need Help?** Check GitHub Actions logs or contact DevOps team.
+**Live URL:** https://your-domain.com/gemini-muse/
+**Need Help?** Check GitHub Actions logs or contact support.
