@@ -49,7 +49,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./dist/gemini-image-prompts/browser/
-        server-dir: /public_html/gemini-muse/
+        server-dir: /
         dangerous-clean-slate: false
         exclude: |
           **/.git*
@@ -70,7 +70,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./
-        server-dir: /public_html/gemini-muse/
+        server-dir: /
         dangerous-clean-slate: false
         exclude: |
           **/*
