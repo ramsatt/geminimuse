@@ -1,0 +1,87 @@
+name: Build and Deploy Gemini Muse
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build Angular app
+      run: npm run build
+      
+    - name: Sync Capacitor
+      run: npx cap sync android
+      
+    - name: Make gradlew executable
+      run: chmod +x android/gradlew
+      
+    - name: Build Android Debug APK
+      run: |
+        cd android
+        ./gradlew assembleDebug --stacktrace
+        
+    - name: Build Android Release APK (unsigned)
+      run: |
+        cd android
+        ./gradlew assembleRelease --stacktrace
+      continue-on-error: true
+      
+    - name: Get build timestamp
+      id: timestamp
+      run: echo "timestamp=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
+      
+    - name: Rename APKs with timestamp
+      run: |
+        mkdir -p build-output
+        cp android/app/build/outputs/apk/debug/app-debug.apk build-output/gemini-muse-debug-${{ steps.timestamp.outputs.timestamp }}.apk
+        if [ -f android/app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+          cp android/app/build/outputs/apk/release/app-release-unsigned.apk build-output/gemini-muse-release-${{ steps.timestamp.outputs.timestamp }}.apk
+        fi
+        
+    - name: Upload APKs as artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: apk-builds-${{ steps.timestamp.outputs.timestamp }}
+        path: build-output/*.apk
+        retention-days: 30
+        
+    - name: Deploy to FTP Server
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./build-output/
+        server-dir: /gemini-muse/builds/
+        dangerous-clean-slate: false
+        
+    - name: Notify build completion
+      if: success()
+      run: |
+        echo "✅ Build successful!"
+        echo "Debug APK: gemini-muse-debug-${{ steps.timestamp.outputs.timestamp }}.apk"
+        echo "Release APK: gemini-muse-release-${{ steps.timestamp.outputs.timestamp }}.apk"
+        echo "Deployed to FTP server"
