@@ -42,39 +42,16 @@ jobs:
         path: gemini-muse-build-${{ steps.timestamp.outputs.timestamp }}.zip
         retention-days: 30
         
-    - name: Deploy to FTP Server
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./dist/gemini-image-prompts/browser/
-        server-dir: /
-        dangerous-clean-slate: false
-        exclude: |
-          **/.git*
-          **/.git*/**
-          **/node_modules/**
-          
-    - name: Create deployment info file
+    - name: Install lftp
+      run: sudo apt-get update && sudo apt-get install -y lftp
+
+    - name: Deploy via lftp
       run: |
-        echo "Build Date: $(date)" > deployment-info.txt
-        echo "Commit: ${{ github.sha }}" >> deployment-info.txt
-        echo "Branch: ${{ github.ref_name }}" >> deployment-info.txt
-        echo "Build Number: ${{ github.run_number }}" >> deployment-info.txt
-        
-    - name: Upload deployment info to FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./
-        server-dir: /
-        dangerous-clean-slate: false
-        exclude: |
-          **/*
-          !deployment-info.txt
+        lftp -e "set ssl:verify-certificate no; \
+        open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_SERVER }}; \
+        mirror -R --verbose --parallel=10 --ignore-time --only-newer ./dist/gemini-image-prompts/browser/assets/ /assets/; \
+        mirror -R --verbose --parallel=10 --exclude assets/ ./dist/gemini-image-prompts/browser/ /; \
+        quit"
         
     - name: Notify deployment completion
       if: success()
