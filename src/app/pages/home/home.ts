@@ -1,104 +1,125 @@
-import { Component, computed, signal, HostListener, OnInit, inject } from '@angular/core';
+import { Component, computed, signal, HostListener, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DataService, GeminiRef } from '../../services/data';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { Router } from '@angular/router';
+import { DataService } from '../../core/services/data.service';
+import { AdmobService } from '../../core/services/admob.service';
+import { FavoritesService } from '../../core/services/favorites.service';
+import { Prompt } from '../../core/models/prompt.model';
 import { TourComponent } from '../../components/tour/tour';
-import { AdmobService } from '../../services/admob/admob.service';
+import { PromptCardComponent } from '../../components/prompt-card/prompt-card';
+import { FilterSheetComponent, FilterState } from '../../components/filter-sheet/filter-sheet';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, ScrollingModule, TourComponent],
+  imports: [CommonModule, ScrollingModule, TourComponent, PromptCardComponent, FilterSheetComponent],
   templateUrl: './home.html',
   styleUrls: ['./home.css']
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private admobService = inject(AdmobService);
+  private favoritesService = inject(FavoritesService);
   private viewCount = 0;
-  
-  images = computed(() => this.dataService.items());
+
+  images  = computed(() => this.dataService.items());
   loading = computed(() => !this.dataService.loaded());
-  
-  // Tour State
+
+  // Tour
   showTour = signal<boolean>(false);
 
+  // Filter sheet visibility
+  showFilterSheet = signal<boolean>(false);
+
   // Search & Filter
-  searchQuery = signal<string>('');
-  activeCategory = signal<string>('All');
+  searchQuery       = signal<string>('');
+  activeCategory    = signal<string>('All');
+  activeAiTool      = signal<string>('All');
+  activeSort        = signal<string>('Newest');
+  showFavoritesOnly = signal<boolean>(false);
+
   readonly categories = ['All', 'Portrait', 'Cinematic', 'Fantasy', 'Anime', 'Street', 'Nature', 'Sci-Fi'];
 
-  // Filter Logic
-  allFilteredImages = computed(() => {
-    const query = this.searchQuery().toLowerCase();
-    const category = this.activeCategory();
-    const all = this.images();
+  // New This Week
+  newPrompts = computed(() => this.dataService.newPrompts());
 
-    return all.filter(img => {
-      // 1. Filter by category
+  // Badge count on filter icon
+  activeFilterCount = computed(() => {
+    let n = 0;
+    if (this.activeAiTool() !== 'All') n++;
+    if (this.activeSort() !== 'Newest') n++;
+    return n;
+  });
+
+  // Filtered + sorted list
+  allFilteredImages = computed(() => {
+    const query    = this.searchQuery().toLowerCase();
+    const category = this.activeCategory();
+    const tool     = this.activeAiTool();
+    const sort     = this.activeSort();
+    const favOnly  = this.showFavoritesOnly();
+    const all      = this.images();
+    const favIds   = this.favoritesService.favorites();
+
+    let result = all.filter(img => {
+      if (favOnly && !favIds.includes(img.id)) return false;
+
+      if (tool !== 'All' && img.ai_tools && img.ai_tools.length > 0) {
+        const toolKey = tool.toLowerCase().replace(/[- ]/g, '-') as any;
+        if (!img.ai_tools.includes(toolKey)) return false;
+      }
+
       if (category !== 'All') {
-        const promptLower = img.prompt.toLowerCase();
-        if (category === 'Portrait' && !promptLower.includes('portrait') && !promptLower.includes('face') && !promptLower.includes('man') && !promptLower.includes('woman')) return false;
-        if (category === 'Cinematic' && !promptLower.includes('cinematic') && !promptLower.includes('movie')) return false;
-        if (category === 'Fantasy' && !promptLower.includes('fantasy') && !promptLower.includes('magic')) return false;
-        if (category === 'Anime' && !promptLower.includes('anime') && !promptLower.includes('manga')) return false;
-        if (category === 'Street' && !promptLower.includes('street') && !promptLower.includes('urban')) return false;
-        if (category !== 'Portrait' && category !== 'Cinematic' && category !== 'Fantasy' && category !== 'Anime' && category !== 'Street') {
-           if (!promptLower.includes(category.toLowerCase())) return false;
+        const pl = img.prompt.toLowerCase();
+        if (category === 'Portrait'  && !pl.includes('portrait') && !pl.includes('face') && !pl.includes('man') && !pl.includes('woman')) return false;
+        if (category === 'Cinematic' && !pl.includes('cinematic') && !pl.includes('movie')) return false;
+        if (category === 'Fantasy'   && !pl.includes('fantasy') && !pl.includes('magic')) return false;
+        if (category === 'Anime'     && !pl.includes('anime') && !pl.includes('manga')) return false;
+        if (category === 'Street'    && !pl.includes('street') && !pl.includes('urban')) return false;
+        if (!['Portrait','Cinematic','Fantasy','Anime','Street'].includes(category)) {
+          if (!pl.includes(category.toLowerCase())) return false;
         }
       }
 
-      // 2. Filter by search query
       if (query) {
-        return img.prompt.toLowerCase().includes(query) || 
-               (img.source && img.source.toLowerCase().includes(query));
+        return img.prompt.toLowerCase().includes(query) ||
+          (img.source && img.source.toLowerCase().includes(query));
       }
-      
       return true;
     });
+
+    if (sort === 'Most Copied') {
+      result = [...result].sort((a, b) => (b.copy_count ?? 0) - (a.copy_count ?? 0));
+    } else if (sort === 'Random') {
+      result = [...result].sort(() => Math.random() - 0.5);
+    }
+
+    return result;
   });
 
-  // Infinite Scroll Logic
-  displayLimit = signal<number>(20); // Increased from 10 to fill screen better
-  
-  visibleImages = computed(() => {
-    return this.allFilteredImages().slice(0, this.displayLimit());
-  });
+  displayLimit  = signal<number>(20);
+  visibleImages = computed(() => this.allFilteredImages().slice(0, this.displayLimit()));
+  hasMoreItems  = computed(() => this.displayLimit() < this.allFilteredImages().length);
 
-  hasMoreItems = computed(() => {
-    return this.displayLimit() < this.allFilteredImages().length;
-  });
-
-  // Virtual Scroll Grid Logic
   columnCount = signal<number>(2);
   gridRows = computed(() => {
-    const displayedImages = this.visibleImages();
     const cols = this.columnCount();
-    const rows = [];
-    for (let i = 0; i < displayedImages.length; i += cols) {
-      rows.push(displayedImages.slice(i, i + cols));
-    }
+    const rows: Prompt[][] = [];
+    const imgs = this.visibleImages();
+    for (let i = 0; i < imgs.length; i += cols) rows.push(imgs.slice(i, i + cols));
     return rows;
   });
 
+  favoritesCount = computed(() => this.favoritesService.count());
+
   constructor(public dataService: DataService) {
-    // Check local storage for tour
-    const hasSeenTour = localStorage.getItem('app_tour_seen_v1');
-    if (!hasSeenTour) {
-      this.showTour.set(true);
-    }
+    if (!localStorage.getItem('app_tour_seen_v1')) this.showTour.set(true);
   }
 
   onScroll(index: number) {
-    const currentRows = this.gridRows().length;
-    const buffer = 5; // Increased buffer to load earlier (was 3)
-    
-    if (index + buffer >= currentRows) {
-       // Check if we have more items to load
-       if (this.displayLimit() < this.allFilteredImages().length) {
-         this.displayLimit.update(l => l + 16); // Load 16 items at once (was 8)
-       }
+    if (index + 5 >= this.gridRows().length && this.displayLimit() < this.allFilteredImages().length) {
+      this.displayLimit.update(l => l + 16);
     }
   }
 
@@ -107,53 +128,61 @@ export class HomeComponent implements OnInit {
     localStorage.setItem('app_tour_seen_v1', 'true');
   }
 
-  ngOnInit() {
-    this.updateColumnCount();
-    // Show banner ad
-    this.admobService.showBanner();
-  }
-
-  ngOnDestroy() {
-    this.admobService.removeBanner();
-  }
+  ngOnInit()    { this.updateColumnCount(); this.admobService.showBanner(); }
+  ngOnDestroy() { this.admobService.removeBanner(); }
 
   @HostListener('window:resize')
-  onResize() {
-    this.updateColumnCount();
-  }
+  onResize() { this.updateColumnCount(); }
 
   updateColumnCount() {
-    const width = window.innerWidth;
-    if (width >= 1280) { // xl
-      this.columnCount.set(5);
-    } else if (width >= 1024) { // lg
-      this.columnCount.set(4);
-    } else if (width >= 768) { // md
-      this.columnCount.set(3);
-    } else {
-      this.columnCount.set(2);
-    }
+    const w = window.innerWidth;
+    if      (w >= 1440) this.columnCount.set(5);
+    else if (w >= 1024) this.columnCount.set(4);
+    else if (w >= 768)  this.columnCount.set(3);
+    else                this.columnCount.set(2);
   }
 
   setCategory(cat: string) {
     this.activeCategory.set(cat);
-    this.displayLimit.set(20); // Reset to initial count
+    this.showFavoritesOnly.set(false);
+    this.displayLimit.set(20);
+  }
+
+  toggleFavorites() {
+    this.showFavoritesOnly.update(v => !v);
+    this.activeCategory.set('All');
+    this.displayLimit.set(20);
   }
 
   updateSearch(e: Event) {
-    const el = e.target as HTMLInputElement;
-    this.searchQuery.set(el.value);
-    this.displayLimit.set(20); // Reset to initial count
+    this.searchQuery.set((e.target as HTMLInputElement).value);
+    this.displayLimit.set(20);
   }
 
-  async openImage(image: GeminiRef) {
+  clearSearch() {
+    this.searchQuery.set('');
+    this.displayLimit.set(20);
+  }
+
+  openFilterSheet()  { this.showFilterSheet.set(true); }
+  closeFilterSheet() { this.showFilterSheet.set(false); }
+
+  onFiltersApplied(state: FilterState) {
+    this.activeAiTool.set(state.aiTool);
+    this.activeSort.set(state.sort);
+    this.displayLimit.set(20);
+    this.closeFilterSheet();
+  }
+
+  get filterSheetState(): FilterState {
+    return { aiTool: this.activeAiTool(), sort: this.activeSort() };
+  }
+
+  async openImage(prompt: Prompt) {
     this.viewCount++;
-    
-    // Show interstitial every 5 views
-    if (this.viewCount % 5 === 0) {
+    if (this.viewCount % this.admobService.INTERSTITIAL_THRESHOLD === 0) {
       await this.admobService.showInterstitial();
     }
-    
-    this.router.navigate(['/prompt', image.id]);
+    this.router.navigate(['/prompt', prompt.id]);
   }
 }

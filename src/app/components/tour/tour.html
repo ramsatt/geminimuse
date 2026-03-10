@@ -1,54 +1,68 @@
-<div class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm animate-fade-in">
-    <!-- Card -->
-    <div class="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col p-8 md:p-10 animate-slide-up">
-        
-        <!-- Graphic Area -->
-        <div class="flex-1 flex items-center justify-center min-h-[180px] mb-6">
-            <div class="w-32 h-32 bg-white rounded-3xl flex items-center justify-center shadow-lg shadow-blue-100 animate-bounce-slow overflow-hidden p-4">
-                @if (steps[currentStep()].image === '✨') {
-                    <img src="assets/images/logo.png" alt="Gemini Muse" class="w-full h-full object-contain">
-                } @else {
-                    <div class="text-6xl">{{ steps[currentStep()].image }}</div>
-                }
-            </div>
-        </div>
+<div class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center animate-fade-in">
 
-        <!-- Content Area -->
-        <div class="text-center mb-10">
-            <h2 class="text-3xl font-bold text-gray-900 mb-3 tracking-tight leading-tight">
-                {{ steps[currentStep()].title }}
-            </h2>
-            <p class="text-gray-500 font-medium text-lg leading-relaxed">
-                {{ steps[currentStep()].description }}
-            </p>
-        </div>
+  <!-- Full-screen gradient bg matching current step -->
+  <div class="absolute inset-0 bg-gradient-to-br transition-all duration-500"
+       [class]="'bg-gradient-to-br ' + steps[currentStep()].gradient">
+  </div>
+  <!-- Noise/depth overlay -->
+  <div class="absolute inset-0 bg-black/10"></div>
 
-        <!-- Dots Indicator -->
-        <div class="flex justify-center gap-2 mb-8">
-            @for (step of steps; track $index) {
-                <div class="h-2 rounded-full transition-all duration-300"
-                     [class.w-8]="$index === currentStep()"
-                     [class.bg-yellow-400]="$index === currentStep()"
-                     [class.w-2]="$index !== currentStep()"
-                     [class.bg-gray-200]="$index !== currentStep()">
-                </div>
-            }
-        </div>
+  <!-- Card -->
+  <div class="relative w-full sm:max-w-md flex flex-col animate-slide-up safe-bottom">
 
-        <!-- Actions -->
-        <div class="flex flex-col gap-3">
-            <button (click)="next()" 
-                    class="w-full h-14 bg-gray-900 text-white hover:bg-black active:scale-[0.98] rounded-2xl font-bold text-lg tracking-wide transition-all shadow-lg shadow-gray-200">
-                {{ currentStep() === steps.length - 1 ? 'Get Started' : 'Next' }}
-            </button>
-            
-            @if (currentStep() < steps.length - 1) {
-                <button (click)="skip()" 
-                        class="w-full h-12 text-gray-400 font-bold text-sm tracking-widest hover:text-gray-600 transition-colors uppercase">
-                    Skip
-                </button>
-            }
-        </div>
+    <!-- Skip link -->
+    @if (currentStep() < steps.length - 1) {
+      <div class="flex justify-end px-6 pt-safe-top pt-6 pb-2">
+        <button (click)="skip()"
+                class="text-white/60 font-semibold text-sm hover:text-white/90 transition-colors">
+          Skip
+        </button>
+      </div>
+    } @else {
+      <div class="pt-10"></div>
+    }
 
+    <!-- Graphic -->
+    <div class="flex flex-col items-center justify-center px-8 py-10 flex-1">
+      <div class="w-28 h-28 rounded-[28px] bg-white/15 backdrop-blur-sm flex items-center justify-center mb-8 animate-bounce-slow shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
+        @if (steps[currentStep()].image === '✨') {
+          <img src="assets/images/logo.png" alt="GeminiMuse logo" class="w-20 h-20 object-contain">
+        } @else {
+          <span class="text-6xl">{{ steps[currentStep()].image }}</span>
+        }
+      </div>
+
+      <!-- Text -->
+      <h2 class="text-3xl font-extrabold text-white text-center mb-4 tracking-tight leading-tight drop-shadow-sm">
+        {{ steps[currentStep()].title }}
+      </h2>
+      <p class="text-white/75 text-base text-center leading-relaxed font-medium max-w-xs">
+        {{ steps[currentStep()].description }}
+      </p>
     </div>
+
+    <!-- Bottom controls -->
+    <div class="px-6 pb-8 flex flex-col gap-5">
+      <!-- Progress dots -->
+      <div class="flex justify-center gap-2" role="tablist" aria-label="Tour steps">
+        @for (step of steps; track $index) {
+          <div class="h-2 rounded-full transition-all duration-300 bg-white"
+               [class.w-7]="$index === currentStep()"
+               [class.opacity-100]="$index === currentStep()"
+               [class.w-2]="$index !== currentStep()"
+               [class.opacity-30]="$index !== currentStep()">
+          </div>
+        }
+      </div>
+
+      <!-- CTA -->
+      <button (click)="next()"
+              class="w-full h-14 rounded-[var(--radius-lg)] font-bold text-base tracking-wide transition-all active:scale-[0.98] shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
+              [style.background]="steps[currentStep()].accent"
+              [style.color]="steps[currentStep()].accent === '#FFFFFF' ? '#111111' : '#111111'">
+        {{ currentStep() === steps.length - 1 ? 'Start Exploring' : 'Next' }}
+      </button>
+    </div>
+
+  </div>
 </div>

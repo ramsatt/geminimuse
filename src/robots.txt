@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://codingtamilan.in/gemini-muse/sitemap.xml

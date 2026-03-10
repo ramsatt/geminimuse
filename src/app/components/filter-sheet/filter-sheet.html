@@ -1,0 +1,62 @@
+<!-- Backdrop -->
+<div class="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm sheet-backdrop"
+     (click)="dismiss.emit()">
+</div>
+
+<!-- Sheet Panel -->
+<div class="fixed inset-x-0 bottom-0 z-50 sheet-panel safe-bottom"
+     (click)="$event.stopPropagation()">
+  <div class="bg-white rounded-t-[28px] shadow-[var(--shadow-3)] px-6 pt-4 pb-6">
+
+    <!-- Drag Handle -->
+    <div class="w-10 h-1 bg-[var(--color-border)] rounded-full mx-auto mb-5"></div>
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-lg font-bold text-[var(--color-text-primary)] tracking-tight">Filters</h2>
+      <button (click)="reset()"
+              class="text-sm font-semibold text-[var(--color-brand-primary)] hover:opacity-70 transition-opacity">
+        Reset
+      </button>
+    </div>
+
+    <!-- AI Tool -->
+    <div class="mb-6">
+      <p class="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-3">AI Tool</p>
+      <div class="flex flex-wrap gap-2">
+        @for (tool of aiTools; track tool) {
+          <button (click)="selectedAiTool.set(tool)"
+                  class="px-4 py-2 rounded-full text-sm font-semibold border transition-all duration-150 active:scale-95"
+                  [class]="selectedAiTool() === tool
+                    ? 'bg-[var(--color-chip-active-bg)] text-[var(--color-chip-active-text)] border-transparent shadow-sm'
+                    : 'bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)] border-transparent hover:border-[var(--color-border)]'">
+            {{ tool }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Sort By -->
+    <div class="mb-8">
+      <p class="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-3">Sort By</p>
+      <div class="flex gap-2 flex-wrap">
+        @for (opt of sortOptions; track opt) {
+          <button (click)="selectedSort.set(opt)"
+                  class="px-4 py-2 rounded-full text-sm font-semibold border transition-all duration-150 active:scale-95"
+                  [class]="selectedSort() === opt
+                    ? 'bg-[var(--color-chip-active-bg)] text-[var(--color-chip-active-text)] border-transparent shadow-sm'
+                    : 'bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)] border-transparent hover:border-[var(--color-border)]'">
+            {{ opt }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Apply CTA -->
+    <button (click)="applyFilters()"
+            class="w-full h-14 rounded-[var(--radius-lg)] bg-[var(--color-chip-active-bg)] text-white font-bold text-base tracking-wide transition-all active:scale-[0.98] shadow-[var(--shadow-2)]">
+      Apply Filters
+    </button>
+
+  </div>
+</div>

@@ -5,10 +5,14 @@ import { AdMob, BannerAdOptions, BannerAdSize, BannerAdPosition, AdOptions, Rewa
   providedIn: 'root'
 })
 export class AdmobService {
-  
+
   // Set to TRUE for development to avoid "No Fill" errors and policy violations
   // Set to FALSE for production release
   private readonly TEST_MODE = false;
+
+  // Frequency controls
+  readonly INTERSTITIAL_THRESHOLD = 8;  // show interstitial every N image opens (was 5)
+  readonly REWARD_COPIES_GRANTED = 10;  // copies unlocked per ad watch (was 5)
 
   // Production Ad Unit IDs
   private readonly BANNER_ID = 'ca-app-pub-8970665297590705/9754370276';
@@ -26,11 +30,11 @@ export class AdmobService {
 
   async initialize() {
     try {
-       await AdMob.initialize({
-         testingDevices: [],
-         initializeForTesting: this.TEST_MODE,
-       });
-       console.log(`AdMob Initialized (${this.TEST_MODE ? 'Test' : 'Production'} Mode)`);
+      await AdMob.initialize({
+        testingDevices: [],
+        initializeForTesting: this.TEST_MODE,
+      });
+      console.log(`AdMob Initialized (${this.TEST_MODE ? 'Test' : 'Production'} Mode)`);
     } catch (e) {
       console.error('AdMob Init Error', e);
     }
@@ -85,21 +89,21 @@ export class AdmobService {
           adId: this.TEST_MODE ? this.TEST_REWARD_ID : this.REWARD_ID,
           isTesting: this.TEST_MODE
         };
-        
+
         await AdMob.prepareRewardVideoAd(options);
-        
+
         const rewardListener = await AdMob.addListener(RewardAdPluginEvents.Rewarded, (reward: AdMobRewardItem) => {
-           console.log('User rewarded', reward);
-           resolve(true);
+          console.log('User rewarded', reward);
+          resolve(true);
         });
 
         const closeListener = await AdMob.addListener(RewardAdPluginEvents.Dismissed, async () => {
-           await rewardListener.remove();
-           await closeListener.remove();
+          await rewardListener.remove();
+          await closeListener.remove();
         });
 
         await AdMob.showRewardVideoAd();
-        
+
       } catch (e) {
         console.error('Reward Ad Error', e);
         resolve(false);

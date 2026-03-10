@@ -1,0 +1,61 @@
+<div (click)="onCardClick()"
+     class="group relative flex-1 aspect-[3/4] rounded-[20px] overflow-hidden cursor-pointer bg-white shadow-[var(--shadow-1)] hover:shadow-[var(--shadow-2)] transition-all duration-300 hover:-translate-y-0.5">
+
+  <!-- Image -->
+  <div class="absolute inset-0 bg-[var(--color-surface-muted)]">
+    <img [src]="prompt.url"
+         class="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+         [alt]="prompt.category ? (prompt.category + ' AI image prompt') : 'AI image prompt'"
+         loading="lazy">
+  </div>
+
+  <!-- Gradient overlay — always present, stronger at bottom -->
+  <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
+
+  <!-- Top row: NEW badge + Favorite button — always visible -->
+  <div class="absolute top-3 inset-x-3 flex items-start justify-between z-10">
+    @if (prompt.is_new) {
+      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--color-new)] text-white tracking-wide uppercase shadow-sm">
+        New
+      </span>
+    } @else {
+      <span></span>
+    }
+
+    <!-- Favorite button — always visible on mobile, visible on hover on desktop -->
+    <button (click)="toggleFavorite($event)"
+            aria-label="Save to favorites"
+            class="w-8 h-8 flex items-center justify-center rounded-full shadow-sm transition-all duration-200 active:scale-90
+                   sm:opacity-0 sm:group-hover:opacity-100"
+            [class]="isFavorite
+              ? 'bg-white text-red-500'
+              : 'bg-black/30 backdrop-blur-sm text-white hover:bg-white hover:text-red-500'">
+      <svg class="w-4 h-4" [attr.fill]="isFavorite ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Bottom info strip — always visible -->
+  <div class="absolute inset-x-0 bottom-0 p-3 z-10">
+    <!-- Category + copy count row -->
+    <div class="flex items-center justify-between mb-1.5">
+      @if (prompt.category) {
+        <span class="px-2 py-0.5 rounded-[var(--radius-sm)] text-[10px] font-bold bg-white/20 backdrop-blur-sm text-white/90 tracking-wide uppercase">
+          {{ prompt.category }}
+        </span>
+      }
+      @if (prompt.copy_count && prompt.copy_count > 0) {
+        <span class="text-[10px] text-white/60 font-medium">
+          {{ prompt.copy_count >= 1000 ? ((prompt.copy_count / 1000) | number:'1.1-1') + 'K' : prompt.copy_count }} copies
+        </span>
+      }
+    </div>
+
+    <!-- Prompt preview — 2 lines always visible -->
+    <p class="text-xs font-medium text-white/85 line-clamp-2 leading-relaxed drop-shadow-sm">
+      {{ prompt.prompt }}
+    </p>
+  </div>
+</div>

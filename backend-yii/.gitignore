@@ -1,0 +1,6 @@
+vendor/
+api/runtime/
+api/config/db.php
+web/assets/
+.env
+*.log

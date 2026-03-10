@@ -14,19 +14,32 @@ export class TourComponent {
   
   steps = [
     {
-      title: 'Welcome to Gemini Muse',
-      description: 'Discover a gallery of high-fidelity image prompts curated just for you.',
-      image: '✨' // Using emoji as placeholder for now, or could be a graphic
+      title: 'Welcome to GeminiMuse',
+      description: 'Your personal AI prompt gallery — curated, multilingual, and ready to inspire.',
+      image: '✨',
+      gradient: 'from-violet-600 to-indigo-700',
+      accent: '#FFD60A',
+    },
+    {
+      title: 'Browse & Discover',
+      description: 'Explore hundreds of AI image prompts across portraits, cinematic scenes, fantasy, anime, and more.',
+      image: '🎨',
+      gradient: 'from-indigo-600 to-blue-600',
+      accent: '#FFFFFF',
     },
     {
       title: 'Multilingual Magic',
-      description: 'Access prompts in your native language. Switch between English, Hindi, Tamil, and more with a tap.',
-      image: '🌐'
+      description: 'Switch prompts to Tamil, Hindi, Telugu, Kannada, Malayalam or English with a single tap.',
+      image: '🌐',
+      gradient: 'from-blue-600 to-cyan-600',
+      accent: '#FFFFFF',
     },
     {
-      title: 'One-Tap Creation',
-      description: 'Found a style you love? Copy the prompt instantly and start creating masterpieces.',
-      image: '🚀'
+      title: 'Copy & Create',
+      description: 'Found the perfect prompt? Copy it instantly and start generating stunning AI artwork.',
+      image: '🚀',
+      gradient: 'from-orange-500 to-pink-600',
+      accent: '#FFFFFF',
     }
   ];
 

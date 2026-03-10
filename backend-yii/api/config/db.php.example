@@ -1,0 +1,16 @@
+<?php
+// Copy this file to db.php and fill in your credentials.
+// db.php is gitignored — never commit real credentials.
+return [
+    'class'    => 'yii\db\Connection',
+    'dsn'      => 'mysql:host=localhost;dbname=geminimuse;charset=utf8mb4',
+    'username' => 'your_db_user',
+    'password' => 'your_db_password',
+    'charset'  => 'utf8mb4',
+    'attributes' => [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    ],
+    'enableSchemaCache' => true,
+    'schemaCacheDuration' => 3600,
+    'schemaCache' => 'cache',
+];

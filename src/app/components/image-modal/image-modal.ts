@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { GeminiRef } from '../../services/data';
+import { Prompt as GeminiRef } from '../../core/models/prompt.model';
 import { Clipboard } from '@capacitor/clipboard';
 
 @Component({
