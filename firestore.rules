@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Favorites ──────────────────────────────────────────────────────────
+    // Doc ID is "{uid}_{promptId}". Users can only access their own favorites.
+    match /favorites/{docId} {
+      allow read, write: if request.auth != null
+        && docId.split('_')[0] == request.auth.uid;
+    }
+
+    // ── Copy Events ────────────────────────────────────────────────────────
+    // Any authenticated user can create. No client reads (stats are aggregated
+    // by a Cloud Function and stored in stats/global).
+    match /copy_events/{docId} {
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+      allow read, update, delete: if false;
+    }
+
+    // ── Stats ──────────────────────────────────────────────────────────────
+    // Public read. Only Cloud Functions can write (enforced by no client rule).
+    match /stats/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── Images (Google Drive references) ───────────────────────────────────
+    // Authenticated users can upload references. Anyone can read public images.
+    match /images/{docId} {
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+      allow read: if true;
+      allow update, delete: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+    }
+
+  }
+}
