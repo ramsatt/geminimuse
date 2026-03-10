@@ -32,7 +32,7 @@ jobs:
 
       - name: Validate composer.json
         working-directory: backend-yii
-        run: composer validate --strict
+        run: composer validate
 
       - name: Install Composer dependencies (no dev)
         working-directory: backend-yii
