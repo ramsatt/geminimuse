@@ -8,7 +8,7 @@ This project uses GitHub Actions to automatically build and deploy the web appli
 - FTP server with web hosting (cPanel, DirectAdmin, etc.)
 - GitHub account with repository admin access
 
-## Setup Instructions
+## Setup Instructions tet
 
 ### 1. Configure GitHub Secrets
 
