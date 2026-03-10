@@ -79,10 +79,10 @@ jobs:
             --prefer-dist \
             --optimize-autoloader
 
-      - name: Create db.php from secret
-        working-directory: backend-yii/api/config
+      # Unquoted heredoc (EOF without quotes) so ${{ secrets.* }} expand correctly
+      - name: Create db.php from secrets
         run: |
-          cat > db.php << 'EOF'
+          cat > backend-yii/api/config/db.php << EOF
           <?php
           return [
               'class'    => 'yii\db\Connection',
@@ -93,9 +93,9 @@ jobs:
               'attributes' => [
                   PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
               ],
-              'enableSchemaCache'    => true,
-              'schemaCacheDuration'  => 3600,
-              'schemaCache'          => 'cache',
+              'enableSchemaCache'   => true,
+              'schemaCacheDuration' => 3600,
+              'schemaCache'         => 'cache',
           ];
           EOF
 
@@ -125,33 +125,33 @@ jobs:
       - name: Install lftp
         run: sudo apt-get update && sudo apt-get install -y lftp
 
-      - name: Deploy via FTP
+      # Write deployment-info BEFORE FTP so it's included in the upload
+      - name: Write deployment-info.txt
         run: |
-          lftp -e "
-            set ssl:verify-certificate no;
-            open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_SERVER }};
-            mirror -R --verbose --parallel=10 --ignore-time --only-newer \
-              ./backend-yii/vendor/ /backend-yii/vendor/;
-            mirror -R --verbose --parallel=10 --ignore-time --only-newer \
-              --exclude vendor/ --exclude api/runtime/ --exclude web/assets/ \
-              ./backend-yii/ /backend-yii/;
-            quit
-          "
-
-      - name: Write deployment info to server
-        run: |
-          lftp -e "
-            set ssl:verify-certificate no;
-            open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_SERVER }};
-            put /dev/stdin -o /backend-yii/deployment-info.txt << 'DEPLOY_EOF'
+          cat > backend-yii/deployment-info.txt << EOF
           Build Date:   $(date -u)
           Commit:       ${{ github.sha }}
           Branch:       ${{ github.ref_name }}
           Run Number:   ${{ github.run_number }}
           Triggered by: ${{ github.actor }}
-          DEPLOY_EOF
-            quit
-          "
+          EOF
+
+      # Use an lftp script file — avoids all multiline quoting issues
+      - name: Build lftp script
+        run: |
+          cat > /tmp/lftp-deploy.txt << 'LFTP_EOF'
+          set ssl:verify-certificate no
+          open -u $FTP_USER,$FTP_PASS $FTP_HOST
+          mirror -R --verbose --parallel=10 --ignore-time --only-newer ./backend-yii/ /backend-yii/
+          quit
+          LFTP_EOF
+
+      - name: Deploy via FTP
+        env:
+          FTP_HOST: ${{ secrets.FTP_SERVER }}
+          FTP_USER: ${{ secrets.FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.FTP_PASSWORD }}
+        run: lftp -f /tmp/lftp-deploy.txt
 
       - name: Notify deployment completion
         if: success()
