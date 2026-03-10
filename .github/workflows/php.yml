@@ -1,0 +1,163 @@
+name: Build and Deploy Yii2 Backend
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend-yii/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend-yii/**'
+  workflow_dispatch:   # allow manual trigger from GitHub Actions UI
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # JOB 1 — Lint & validate (runs on every push / PR)
+  # ─────────────────────────────────────────────────────────────────────────
+  lint:
+    name: PHP Lint & Composer Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, pdo_mysql, intl, json
+          tools: composer:v2
+
+      - name: Validate composer.json
+        working-directory: backend-yii
+        run: composer validate --strict
+
+      - name: Install Composer dependencies (no dev)
+        working-directory: backend-yii
+        run: |
+          composer install \
+            --no-dev \
+            --no-interaction \
+            --prefer-dist \
+            --optimize-autoloader
+
+      - name: PHP syntax check (lint all .php files)
+        working-directory: backend-yii
+        run: |
+          find api web -name "*.php" -print0 \
+            | xargs -0 -P4 php -l \
+            && echo "✅ No syntax errors found."
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # JOB 2 — Deploy (runs only on push to main, after lint passes)
+  # ─────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to FTP Server
+    runs-on: ubuntu-latest
+    needs: lint
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, pdo_mysql, intl, json
+          tools: composer:v2
+
+      - name: Install Composer dependencies (production)
+        working-directory: backend-yii
+        run: |
+          composer install \
+            --no-dev \
+            --no-interaction \
+            --prefer-dist \
+            --optimize-autoloader
+
+      # Unquoted heredoc (EOF without quotes) so ${{ secrets.* }} expand correctly
+      - name: Create db.php from secrets
+        run: |
+          cat > backend-yii/api/config/db.php << EOF
+          <?php
+          return [
+              'class'    => 'yii\db\Connection',
+              'dsn'      => '${{ secrets.YII_DB_DSN }}',
+              'username' => '${{ secrets.YII_DB_USER }}',
+              'password' => '${{ secrets.YII_DB_PASSWORD }}',
+              'charset'  => 'utf8mb4',
+              'attributes' => [
+                  PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+              ],
+              'enableSchemaCache'   => true,
+              'schemaCacheDuration' => 3600,
+              'schemaCache'         => 'cache',
+          ];
+          EOF
+
+      - name: Get build timestamp
+        id: timestamp
+        run: echo "timestamp=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Create deployment archive (exclude dev/local files)
+        run: |
+          cd backend-yii
+          zip -r ../yii-backend-${{ steps.timestamp.outputs.timestamp }}.zip . \
+            --exclude "*.log" \
+            --exclude ".env*" \
+            --exclude ".git*" \
+            --exclude ".gitignore" \
+            --exclude "api/runtime/*" \
+            --exclude "web/assets/*" \
+            --exclude "*.example"
+
+      - name: Upload build archive as GitHub artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yii-backend-${{ steps.timestamp.outputs.timestamp }}
+          path: yii-backend-${{ steps.timestamp.outputs.timestamp }}.zip
+          retention-days: 30
+
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      # Write deployment-info BEFORE FTP so it's included in the upload
+      - name: Write deployment-info.txt
+        run: |
+          cat > backend-yii/deployment-info.txt << EOF
+          Build Date:   $(date -u)
+          Commit:       ${{ github.sha }}
+          Branch:       ${{ github.ref_name }}
+          Run Number:   ${{ github.run_number }}
+          Triggered by: ${{ github.actor }}
+          EOF
+
+      # Use an lftp script file — avoids all multiline quoting issues
+      - name: Build lftp script
+        run: |
+          cat > /tmp/lftp-deploy.txt << 'LFTP_EOF'
+          set ssl:verify-certificate no
+          open -u $FTP_USER,$FTP_PASS $FTP_HOST
+          mirror -R --verbose --parallel=10 --ignore-time --only-newer ./backend-yii/ /backend-yii/
+          quit
+          LFTP_EOF
+
+      - name: Deploy via FTP
+        env:
+          FTP_HOST: ${{ secrets.FTP_SERVER }}
+          FTP_USER: ${{ secrets.FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.FTP_PASSWORD }}
+        run: lftp -f /tmp/lftp-deploy.txt
+
+      - name: Notify deployment completion
+        if: success()
+        run: |
+          echo "✅ Yii2 backend deployed successfully!"
+          echo "Build timestamp : ${{ steps.timestamp.outputs.timestamp }}"
+          echo "Commit SHA      : ${{ github.sha }}"
+          echo "Run number      : ${{ github.run_number }}"
+          echo "Deployed to     : /backend-yii/ on FTP server"
